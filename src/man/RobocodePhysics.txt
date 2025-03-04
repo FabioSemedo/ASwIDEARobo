@@ -1,0 +1,33 @@
+Robot Movement:
+    Robots can move forward or backward with setAhead(distance) and setBack(distance).
+    The maximum speed is 8 pixels per tick.
+    The acceleration is 1 pixel per tick (if going slower than max speed).
+    The deceleration is 2 pixels per tick, meaning stopping is faster than accelerating. setStop().
+
+Robot Turning Speed:
+    At full speed (8), max turn rate = 10° − (0.75 × speed) = 4° per tick.
+
+Gun & Radar Mechanics:
+    Gun:
+    Use setTurnGunRight(degrees) or setTurnGunLeft(degrees).
+    The gun rotates up to 20° per tick.
+    Radar:
+    The radar rotates up to 45° per tick.
+    If locked onto an enemy (setAdjustRadarForGunTurn(true)), it stays locked while the gun moves.If locked onto an enemy (setAdjustRadarForGunTurn(true)), it stays locked while the gun moves.
+
+* Bullets have an energy cost that is deducted from our Energy/Health.
+Bullet Speed: 
+    speed = 20 - 3*bullet_power. setFire(power).
+Bullet Damage:
+    A hit on an enemy deals 4 × power, plus 2 × power if the enemy has no armor left.
+    A self-hit (from hitting a wall) deals 2 × power damage to yourself.
+
+    Power	Speed (px/tick)	Damage
+    0.1	    19.7	        0.1
+    1.0	    17.0	        4.0
+    2.0	    14.0	        6.0
+    3.0	    11.0	        9.0
+
+Collisions:
+    Hitting walls -> we stop and take damage = 0.5 * current speed
+    Hitting robots -> 0.6 damage per tick to both bots
