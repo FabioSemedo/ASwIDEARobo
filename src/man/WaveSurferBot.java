@@ -18,6 +18,7 @@ public class WaveSurferBot extends AdvancedRobot {
     }
 
     public void onScannedRobot(ScannedRobotEvent e) {
+        //CONCERTAR ISSO
         /*
         double enemyDistance = e.getDistance();
         enemyAbsoluteBearing = getHeadingRadians() + Math.toRadians(e.getBearing());
@@ -38,6 +39,8 @@ public class WaveSurferBot extends AdvancedRobot {
         if(getGunHeat()==0)
             fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
 //*/
+
+        //RETIRADO DO TRACKER FIRE ATUALIZAR
         double absoluteBearing = getHeading() + e.getBearing();
         double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
 
@@ -74,6 +77,7 @@ public class WaveSurferBot extends AdvancedRobot {
         double newY = getY() + Math.cos(Math.toRadians(getHeading() + angle)) * moveDistance;
 
         // Check if this move would hit a wall
+
         if (isNearWall(newX, newY)) {
             if(newX < 50){ // LeftWall
                 angle = 0;
