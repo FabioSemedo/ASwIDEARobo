@@ -12,16 +12,13 @@ public class WaveSurferBot extends AdvancedRobot {
     private double enemyAbsoluteBearing;
 
     public void run() {
-        setAdjustGunForRobotTurn(true);
-        setAdjustRadarForGunTurn(true);
-
         while (true) {
-            setTurnRadarRight(360); // Keep scanning
-            execute();
+            turnGunRight(360); // Keep scanning
         }
     }
 
     public void onScannedRobot(ScannedRobotEvent e) {
+        /*
         double enemyDistance = e.getDistance();
         enemyAbsoluteBearing = getHeadingRadians() + Math.toRadians(e.getBearing());
 
@@ -33,12 +30,39 @@ public class WaveSurferBot extends AdvancedRobot {
         }
 
         // Move perpendicular to enemy while avoiding walls
-        moveSafely(e);
+
+
         double absoluteBearing = getHeading() + e.getBearing();
         double bearingFromGun = robocode.util.Utils.normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
 
         if(getGunHeat()==0)
             fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
+//*/
+        double absoluteBearing = getHeading() + e.getBearing();
+        double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+
+        // If it's close enough, fire!
+        if (Math.abs(bearingFromGun) <= 3) {
+            turnGunRight(bearingFromGun);
+            // We check gun heat here, because calling fire()
+            // uses a turn, which could cause us to lose track
+            // of the other robot.
+            if (getGunHeat() == 0) {
+                fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
+            }
+        } // otherwise just set the gun to turn.
+        // Note:  This will have no effect until we call scan()
+        else {
+            turnGunRight(bearingFromGun);
+        }
+        // Generates another scan event if we see a robot.
+        // We only need to call this if the gun (and therefore radar)
+        // are not turning.  Otherwise, scan is called automatically.
+        moveSafely(e);
+
+        if (bearingFromGun == 0) {
+            scan();
+        }
     }
 
     private void moveSafely(ScannedRobotEvent e) {
@@ -51,12 +75,27 @@ public class WaveSurferBot extends AdvancedRobot {
 
         // Check if this move would hit a wall
         if (isNearWall(newX, newY)) {
-            angle += 45; // Adjust to slide along the wall
+            if(newX < 50){ // LeftWall
+                angle = 0;
+            }
+
+            else if(newX > getWidth()-50){ //RightWall
+                angle = getHeading() ;
+            }
+
+            else if(newY < 50){// BottomWall
+                angle = getHeading() ;
+            }
+
+            else if(newY > getHeading()-50){ // TopWall
+                angle += 45; // Adjust to slide along the wall
+            }
         }
 
         setTurnRight(angle);
         setAhead(moveDistance);
     }
+
 
     private boolean isNearWall(double x, double y) {
         double buffer = 50; // How close before we avoid walls

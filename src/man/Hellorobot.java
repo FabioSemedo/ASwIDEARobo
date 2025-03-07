@@ -48,9 +48,6 @@ public class Hellorobot extends AdvancedRobot {
 		// fire hard!
 		e.getBearing();
 
-
-
-
 		if (e.getDistance() < 50 && getEnergy() > 50) {
 			fire(3);
 		} // otherwise, fire 1.
