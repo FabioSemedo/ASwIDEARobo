@@ -1,0 +1,277 @@
+package man;
+
+import robocode.*;
+import java.awt.*;
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+
+import static robocode.util.Utils.normalRelativeAngleDegrees;
+
+public class WaveSurferBot extends AdvancedRobot {
+    private ArrayList<Wave> waves = new ArrayList<>();
+    private double enemyAbsoluteBearing;
+
+    public void run() {
+        while (true) {
+            turnGunRight(360); // Keep scanning
+        }
+    }
+
+    public void onScannedRobot(ScannedRobotEvent e) {
+        //CONCERTAR ISSO
+
+        //  VARIAVEIS RELATIVAS A= INIMIGO
+        double distanciaInimigo = e.getDistance(); //Distancia do inimigo
+        double direcaoInimigo = e.getHeadingRadians() + Math.toRadians(e.getBearing());
+        double velocidadeInimigo = e.getVelocity(); // velocidade do inimigo
+
+
+
+        // VARIAVEIS RELATIVAS AO PODER DE FOGO DO INIMIGO
+        double bulletPower = Math.max(0.1, Math.min(3, getEnergy() - e.getEnergy()));//poder de fogo do inimigo
+        // bulletPower utilizza o Math.max para conter
+        // a possibilidade da diferença do robo inimigo te mais energia que o nosso
+        // e garantir que a potencia do possivel tiro do inimigo tenha no minimo 0.1
+        double bulletSpeed = 20 - (3* bulletPower); // velocidade da bala enviada
+
+
+
+
+
+        // VARIAVEIS RELATIVAS A RELACAO EU-INIMIGO
+        double AnguloInimigo = getHeading() + e.getBearing(); // angulo do inimigo em relacao a mim
+        double ajustarAnguloArma = normalRelativeAngleDegrees(AnguloInimigo - getGunHeading());
+        // ajusta o angulo da arma levando em conta
+        // o angulo que o inimigo esta e o angulo atual da arma
+
+        // VARIAVEIS RELATIVAS AO PODER DE FOGO NOSSO ROBÔ
+        double MyBulletPower = Math.min(3 - ajustarAnguloArma, getEnergy() - 0.1);
+        // poder de fogo do nosso robô
+        double MyBulletSpeed = 20 - (3* MyBulletPower); // velocidade das minhas balas
+
+        // VARIAVEIS TEMPORAIS RELATIVAS A RELACAO EU-INIMIGO
+        double tempoEstimado = distanciaInimigo/ bulletSpeed; // tempo da bala chegar ao inimigo
+        double MeuTempoEstimado = distanciaInimigo/ MyBulletSpeed; // tempo da minha bala chegar ao inimigo
+
+        // LOCALIZACAO ATUAL DO INIMIGO
+        double InimigoX = getX() + Math.sin(direcaoInimigo)*distanciaInimigo;
+        //localizacao atual do inimigo em x
+        double InimigoY = getY() + Math.cos(direcaoInimigo)*distanciaInimigo;
+        //localizacao atual do inimigo em x
+
+
+        // LOCALIZACAO FUTURA DO INIMIGO ASSUMINDO QUE ELE SE MOVERA EM LINHA RETA
+        double FuturoInimigoX = InimigoX + velocidadeInimigo*MeuTempoEstimado*Math.sin(direcaoInimigo);
+        // localizacao futura do inimigo em x
+        double FuturoInimigoY = InimigoY + velocidadeInimigo*MeuTempoEstimado*Math.cos(direcaoInimigo);
+        // localizacao futura do inimigo em y
+        double AnguloFuturoInimigo = Math.toDegrees(Math.atan2(FuturoInimigoX - getX(), FuturoInimigoY - getY()));
+        // esse é o futuro AnguloInimigo
+        double FuturoAjustar
+
+
+        // AÇÕES
+
+        // EVITAR O INIMIGO E SUAS BALAS
+
+        //a bala inimiga existe (tem poder > 0) e é no maximo 3
+        if ((bulletPower > 0)&&(bulletPower <= 3))
+        {
+            //criar as ondas inimigas para qual o nosso robô deve evitar
+            waves.add(new Wave(getX(), getY(), direcaoInimigo, bulletSpeed, getTime()));
+
+        }
+
+        //Movimento perpendicular ao inimigo
+        moveSafely(e);
+
+        // ATIRAR CONTRA O INIMIGO
+
+        //checar se a arma esta desalinhada e
+        // se estiver ela poder estar no maximo 3º desalinhada
+        // pq se for mais que isso o robô levará muito tempo alinhado
+        // ou vai atirar mesmo que estiver muito desalinhado
+        if (Math.abs(ajustarAnguloArma) <= 3) {
+
+            turnGunRight(ajustarAnguloArma); //ajusto a arma
+
+            // checar se a arma pode atirar pq se não puder,
+            // podemos perder a direção do inimigo
+            if (getGunHeat() == 0) {
+                fire(MyBulletPower);
+            }
+            else {
+                turnGunRight(ajustarAnguloArma);
+                // se a arma nao esta preparada para atirar, apenas ajustar
+
+            }
+
+
+
+            if (ajustarAnguloArma == 0)
+            {
+                scan(); //voltar para o inicio do onScannerdRobot
+            }
+        }
+
+
+        /// // DIVISAO
+
+//        double enemyDistance = e.getDistance(); //distancia do inimigo
+//        enemyAbsoluteBearing = getHeadingRadians() + Math.toRadians(e.getBearing());
+//         //direcao do inimigo
+//        // Detect enemy fire
+//        double bulletPower = Math.min(3, getEnergy() - e.getEnergy());
+//        if (bulletPower > 0 && bulletPower <= 3) {
+//            double bulletSpeed = 20 - (3 * bulletPower);
+//            waves.add(new Wave(getX(), getY(), enemyAbsoluteBearing, bulletSpeed, getTime()));
+//        }
+//
+//        // Move perpendicular to enemy while avoiding walls
+//        moveSafely(e);
+//
+//
+//        double absoluteBearing = getHeading() + e.getBearing();
+//        double bearingFromGun = robocode.util.Utils.normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+//
+//        if(getGunHeat()==0)
+//            fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
+////*/
+
+//        //RETIRADO DO TRACKER FIRE ATUALIZAR
+//        double absoluteBearing = getHeading() + e.getBearing();
+//        double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+//
+//        // If it's close enough, fire!
+//        if (Math.abs(bearingFromGun) <= 3) {
+//            turnGunRight(bearingFromGun);
+//            // vê se a arma esta pronta para atirar
+//            // pq se atirar e nao estiver podemos perder a mira
+//            if (getGunHeat() == 0) {
+//                fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
+//                //atira o minimo entra o o maximo possivel
+//                // que podemos tirar de energia e o maximo que podemos atirar
+//                // nao entendo Math.abs(bearingFromGun
+//            }
+//        } // otherwise just set the gun to turn.
+//        // Note:  This will have no effect until we call scan()
+//        else {
+//            turnGunRight(bearingFromGun);
+//        }
+//        // Generates another scan event if we see a robot.
+//        // We only need to call this if the gun (and therefore radar)
+//        // are not turning.  Otherwise, scan is called automatically.
+//        moveSafely(e);
+//
+//        if (bearingFromGun == 0) {
+//            scan();
+//        }
+    }
+
+
+
+    private void moveSafely(ScannedRobotEvent e) {
+        double angle = e.getBearing() + 90; // Perpendicular movement
+        if (Math.random() > 0.5) angle *= -1; // Randomly flip direction
+
+        double moveDistance = 100;
+        double newX = getX() + Math.sin(Math.toRadians(getHeading() + angle)) * moveDistance;
+        double newY = getY() + Math.cos(Math.toRadians(getHeading() + angle)) * moveDistance;
+
+
+        // Check if this move would hit a wall
+
+        if (isNearWall(newX, newY)) {
+            if(newX < 50){ // LeftWall
+             if (newY < 50)
+             {
+                 angle += 90;
+                 //situacao canto esquerdo inferior
+             }
+             else {
+                 if (newY > getHeight() - 50)
+                 {
+                     angle += 90;
+                    // situacao canto direito superior
+                 }
+                 else
+                 {
+                     angle += 45;
+                     //situacao parede esquerda
+                 }
+             }
+            }
+
+            else if(newX > getWidth()-50){ //RightWall
+                if(newY < 50)
+                {
+                    back(20);
+                    angle += 45;
+                    turnGunRight(angle);
+                    ahead( 50);
+                    //situacao canto direito inferior
+                }
+                else {
+                    if (newY > getHeight() - 50) {
+
+                        back(20);
+                        angle += 45;
+                        ahead( 50);
+                        //situacao canto direito superior
+                    }
+                    else {
+                        angle = getHeading() + 180;
+                        // situacao parede direita
+                    }
+                }
+            }
+
+            else if(newY < 50){// BottomWall
+                angle = getHeading() + 180;
+                // situacao parede inferior
+            }
+
+            else if(newY > getHeading()-50){ // TopWall
+                angle  = getHeading() + 180; // Adjust to slide along the wall
+                // situacao parede superior
+            }
+        }
+
+
+
+        setTurnRight(angle);
+        setAhead(moveDistance);
+    }
+
+
+    private boolean isNearWall(double x, double y) {
+        double buffer = 50; // How close before we avoid walls
+        return (x < buffer || x > getBattleFieldWidth() - buffer ||
+                y < buffer || y > getBattleFieldHeight() - buffer);
+    }
+
+    public void onPaint(Graphics2D g) {
+        g.setColor(Color.RED);
+        for (Wave wave : waves) {
+            int radius = wave.getCurrentRadius(getTime());
+            g.drawOval((int) (wave.x - radius), (int) (wave.y - radius), radius * 2, radius * 2);
+        }
+    }
+
+    private class Wave {
+        double x, y;
+        double bulletSpeed;
+        long creationTime;
+
+        public Wave(double x, double y, double absoluteBearing, double bulletSpeed, long creationTime) {
+            this.x = x + Math.sin(absoluteBearing) * 10; //o robocode gira 90 graus o circulo trigonometrico,
+            this.y = y + Math.cos(absoluteBearing) * 10;
+            this.bulletSpeed = bulletSpeed;
+            this.creationTime = creationTime;
+        }
+
+        public int getCurrentRadius(long currentTime)
+        {
+            return (int) ((currentTime - creationTime) * bulletSpeed);
+        }
+    }
