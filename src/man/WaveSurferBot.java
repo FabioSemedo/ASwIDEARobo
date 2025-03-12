@@ -6,15 +6,20 @@
 package man;
 
 import robocode.AdvancedRobot;
-import robocode.Condition;
-import robocode.CustomEvent;
 import robocode.ScannedRobotEvent;
+import robocode.HitByBulletEvent;
+import robocode.CustomEvent;
+import robocode.Condition;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 public class WaveSurferBot extends AdvancedRobot {
+    // Battlefield dimensions for wall smoothing
+    private static final int WALL_SPACE = 100; // minimum pixels we keep from the wall
+    private static final int MIN_WALL_SPACE = 40; // minimum pixels we keep from the wall
+
     private static final int GUESS_FACTOR_RANGE = 47;
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
 
@@ -27,9 +32,6 @@ public class WaveSurferBot extends AdvancedRobot {
     public ArrayList<Double> waveAbsBearings;   // Absolute bearings of point of fire from past scans
 
     public static double enemyEnergy = 100.0;   // Enemy's last known energy level
-    // Battlefield dimensions for wall smoothing
-    private static final int WALL_SPACE = 100; // minimum pixels we keep from the wall
-    private static final int MIN_WALL_SPACE = 40; // minimum pixels we keep from the wall
 
     public void run() {
         setBodyColor(Color.black);
@@ -63,7 +65,7 @@ public class WaveSurferBot extends AdvancedRobot {
 
     public void onScannedRobot(ScannedRobotEvent e) {
         checkWave(e);
-        surfWaves();
+        //surfWaves();
 
         /*
             Aiming
@@ -74,13 +76,16 @@ public class WaveSurferBot extends AdvancedRobot {
     public boolean checkWave(ScannedRobotEvent e) {
         double enemyAbsBearing = getHeadingRadians() + e.getBearingRadians();
         double bulletPower = enemyEnergy - e.getEnergy();
-        boolean newWave = (bulletPower < 3.01 && bulletPower > 0.09
-                && _surfDirections.size() > 2)
+        boolean newWave=false;
+
+/*       ArrayList<Integer> _surfDirections = new ArrayList<Integer>();
+
+        newWave = (bulletPower < 3.01 && bulletPower > 0.09) && (_surfDirections.size() > 2);
 
         if(newWave){
 
         }
-
+*/
         // Adjust radar to keep tracking the enemy
         setTurnRadarRight(robocode.util.Utils.normalRelativeAngleDegrees(enemyAbsBearing - getRadarHeadingRadians()) * 2);
 
@@ -98,10 +103,13 @@ public class WaveSurferBot extends AdvancedRobot {
 
         enemyLocation = project(myLocation, enemyAbsBearing, e.getDistance());
         myLocation.setLocation(getX(),getY());
+        return newWave;
     }
 
     @Override
-    public void onBulletHitEvent()
+    public void onHitByBullet(HitByBulletEvent e){
+
+    }
 
     public void moveSafely(ScannedRobotEvent e) {
         double angle = e.getBearing() + 90; // Perpendicular movement

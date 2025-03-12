@@ -18,24 +18,27 @@ public class MeuDeus extends AdvancedRobot {
 
     //movimentação básica
     public void run() {
+        setColors(Color.gray, Color.black, Color.white, Color.red, Color.yellow);
 
 
         while (true) {
-            setColors(Color.gray, Color.black, Color.white, Color.red, Color.yellow);
             ahead(100);
 
             turnGunRight(360);
 
             back(100);
-
-
         }
     }
 
     //o robô viu outro robô e agora?
     public void onScannedRobot(ScannedRobotEvent e) {
+        if(getGunHeat()==0) fire(1);
+        circularTargeting(e);
+    }
 
-        // public void CircularTargeting ( ScannedRobotEvent e){
+    //Fabs: By convention methods like this should not start with a capital letter. The same is true for variables. (reserved for Objects/Classes)
+    //Fabs: This does not seem to finish. I think there might be a logic error.
+    public void circularTargeting ( ScannedRobotEvent e){
 
         //CRIAR A VARIAVEL INICIAL DIRECAOINIMIGOINICIAL NAO ESQUECER!!!!
         // MINHAS INFORMAÇÕES
@@ -89,7 +92,7 @@ public class MeuDeus extends AdvancedRobot {
 
 
         //SIMULAÇÃO DO MOVIMENTO
-
+        //Fabs: Infinite Loop???
         while (tempoAtual * MyBulletSpeed < Point2D.distance(atualX, atualY, FuturoInimigoX, FuturoInimigoY)) {
             FuturoInimigoX += velocidadeInimigo * Math.sin(direcaoInimigo); // atualiza "teoricamente" o x do inimigo
             FuturoInimigoY += velocidadeInimigo * Math.cos(direcaoInimigo); // atualiza "teoricamente" o y do inimigo
@@ -245,5 +248,6 @@ public class MeuDeus extends AdvancedRobot {
 
 //        }
 //    }
+
     }
 }

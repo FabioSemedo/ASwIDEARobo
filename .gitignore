@@ -1,10 +1,13 @@
+### Filetypes and Exceptions ###
+*.class
+*.xml
+*.iml
+stdOut.dat
+
 ### IntelliJ IDEA ###
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-*.class
-*.xml
-*.iml
 
 ### Eclipse ###
 .apt_generated
