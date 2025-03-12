@@ -14,8 +14,6 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
-import static robocode.util.Utils.normalRelativeAngleDegrees;
-
 public class WaveSurferBot extends AdvancedRobot {
     private static final int GUESS_FACTOR_RANGE = 47;
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
@@ -23,7 +21,7 @@ public class WaveSurferBot extends AdvancedRobot {
     public Point2D.Double myLocation;
     public Point2D.Double enemyLocation;
 
-    public ArrayList<EnemyWave> waves;     // List of active waves
+    public ArrayList<Wave> waves;     // List of active waves
     public ArrayList<Integer> surfDirections;   // Directions of past movements
 
     public ArrayList<Double> waveAbsBearings;   // Absolute bearings of point of fire from past scans
@@ -31,9 +29,9 @@ public class WaveSurferBot extends AdvancedRobot {
     public static double enemyEnergy = 100.0;   // Enemy's last known energy level
     // Battlefield dimensions for wall smoothing
     private static final int WALL_SPACE = 100; // minimum pixels we keep from the wall
+    private static final int MIN_WALL_SPACE = 40; // minimum pixels we keep from the wall
 
     public void run() {
-        
         setBodyColor(Color.black);
         setGunColor(Color.red);
         setRadarColor(Color.black);
@@ -43,7 +41,7 @@ public class WaveSurferBot extends AdvancedRobot {
         //Too close to a wall
         addCustomEvent(new Condition("walled") {
             public boolean test() {
-                return isNearWall(getX(), getY(),40);
+                return isNearWall(getX(), getY(), MIN_WALL_SPACE);
             }
         });
 
@@ -64,63 +62,48 @@ public class WaveSurferBot extends AdvancedRobot {
     }
 
     public void onScannedRobot(ScannedRobotEvent e) {
-        double enemyDistance = e.getDistance();
-        double enemyAbsBearing = getHeadingRadians() + e.getBearingRadians();
+        checkWave(e);
+        surfWaves();
 
-        myLocation.setLocation(getX(),getY());
-        enemyLocation = project(myLocation, enemyAbsBearing, e.getDistance());
+        /*
+            Aiming
+         */
+    }
+
+    //Checks and updates Wave ArrayList based on energy drops. Returns
+    public boolean checkWave(ScannedRobotEvent e) {
+        double enemyAbsBearing = getHeadingRadians() + e.getBearingRadians();
+        double bulletPower = enemyEnergy - e.getEnergy();
+        boolean newWave = (bulletPower < 3.01 && bulletPower > 0.09
+                && _surfDirections.size() > 2)
+
+        if(newWave){
+
+        }
 
         // Adjust radar to keep tracking the enemy
-        setTurnRadarRightRadians(robocode.util.Utils.normalRelativeAngle(enemyAbsBearing - getRadarHeadingRadians()) * 2);
+        setTurnRadarRight(robocode.util.Utils.normalRelativeAngleDegrees(enemyAbsBearing - getRadarHeadingRadians()) * 2);
 
         // Detect enemy fire
-        double bulletPower = Math.min(3, getEnergy() - e.getEnergy());
+        bulletPower = Math.min(3, enemyEnergy - e.getEnergy());
+        enemyEnergy = e.getEnergy();
         if (bulletPower > 0 && bulletPower <= 3) {
             double bulletSpeed = 20 - (3 * bulletPower);
-            waves.add(new Wave(getTime(), myLocation, enemyAbsBearing, bulletSpeed, getTime()));
+            waves.add(new Wave(getTime() -1 , enemyLocation, enemyAbsBearing, bulletSpeed));
         }
 
         // Move perpendicular to enemy while avoiding walls
         double absoluteBearing = getHeading() + e.getBearing();
         double bearingFromGun = robocode.util.Utils.normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
 
-        if(getGunHeat()==0)
-            fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
-
-
-        //RETIRADO DO TRACKER FIRE ATUALIZAR
-        /*
-        double absoluteBearing = getHeading() + e.getBearing();
-        double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
-
-        // If it's close enough, fire!
-        if (Math.abs(bearingFromGun) <= 3) {
-            turnGunRight(bearingFromGun);
-            // We check gun heat here, because calling fire()
-            // uses a turn, which could cause us to lose track
-            // of the other robot.
-            if (getGunHeat() == 0) {
-                fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1));
-            }
-        } // otherwise just set the gun to turn.
-        // Note:  This will have no effect until we call scan()
-        else {
-            turnGunRight(bearingFromGun);
-        }
-
-        // Generates another scan event if we see a robot.
-        // We only need to call this if the gun (and therefore radar)
-        // are not turning.  Otherwise, scan is called automatically.
-        if (bearingFromGun == 0) {
-            scan();
-        }
-        */
-
-        moveSafely(e);
-
+        enemyLocation = project(myLocation, enemyAbsBearing, e.getDistance());
+        myLocation.setLocation(getX(),getY());
     }
 
-    private void moveSafely(ScannedRobotEvent e) {
+    @Override
+    public void onBulletHitEvent()
+
+    public void moveSafely(ScannedRobotEvent e) {
         double angle = e.getBearing() + 90; // Perpendicular movement
         if (Math.random() > 0.5) angle *= -1; // Randomly flip direction
 

@@ -1,33 +1,33 @@
 /*
- * Copyright (c) 2001-2023 Mathew A. Nelson and Robocode contributors
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * https://robocode.sourceforge.io/license/epl-v10.html
+ *
  */
 package man;
 
 import java.awt.Color;
-// import java.io.BufferedWriter;
-// import java.io.FileWriter;
-// import java.io.IOException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintStream;
 
-import robocode.*;
+import robocode.AdvancedRobot;
+import robocode.RobocodeFileOutputStream;
+import robocode.ScannedRobotEvent;
+import robocode.HitByBulletEvent;
+
 import static robocode.util.Utils.normalRelativeAngle;
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 
 /**
- * MyFirstRobot - a sample robot by Mathew Nelson.
+ * Hello(World)Robot
  * <p>
- * Moves in a seesaw motion, and spins the gun around at each end.
+ * Prints to a data file.
+ * 	Mish-mash of Robocode sample bots.
  *
- * @author Mathew A. Nelson (original)
+ * @author Fabio Semedo
  */
 public class Hellorobot extends AdvancedRobot {
-	/**
-	 * MyFirstRobot's run method - Seesaw
-	 */
+
 	public void run() {
 		//color of the body, gun, radar, bullet, and scan arc
 		setBodyColor(Color.black);
@@ -36,36 +36,56 @@ public class Hellorobot extends AdvancedRobot {
 		setBulletColor(Color.red);
 
 		while (true) {
-			turnGunRight(90);
+			ahead(100);
+			turnRight(180);
 		}
 	}
 
-	/*
-	 * Fire when we see a robot
-	 */
-	public void onScannedRobotEvent(ScannedRobotEvent e){
+	@Override
+	public void onScannedRobot(ScannedRobotEvent e){
         double absBearing = getHeading() + e.getHeading();
 		double absBearingRadias = getHeadingRadians() + e.getHeadingRadians();
 
 		setTurnRadarRightRadians(robocode.util.Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
 		String str = String.format("""
                         «Testing angle normalisation functions:»
-                        absBearing:\t\t%.3f || %.3f
-                        normalRelativeAngle:  \t\t%.3f || %.3f
-                        normalRelativeAngleDg:\t\t%.3f || %.3f
+                        absBearing Dg || Rd:
+                        %.3f\t%.3f
+                        normalRelativeAngle Dg || Rd:
+                        %.3f\t%.3f\t\t%.3f|%.3f
+						normalRelativeAngleDegrees Dg || Rd:
+						%.3f\t%.3f\t\t%.3f|%.3f
                         """,
 				absBearing, absBearingRadias,
 				normalRelativeAngle(absBearing), normalRelativeAngle(absBearingRadias),
 				normalRelativeAngleDegrees(absBearing), normalRelativeAngleDegrees(absBearingRadias));
 
-		out.println("Getting closer."+100.0);
-		out.println(str);
+        PrintStream w = null;
+        try {
+            w = new PrintStream(new RobocodeFileOutputStream(("stdOut.dat"), true));
+
+            w.println(str);
+
+            // PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+            if (w.checkError()) {
+                out.println("I could not write the str!");
+            }
+        } catch (IOException exp) {
+            out.println("IOException trying to write: ");
+            exp.printStackTrace(out);
+        } finally {
+            if (w != null) {
+                w.close();
+            }
+        }
     }
 
 	/**
 	 * We were hit!  Turn perpendicular to the bullet,
 	 * so our seesaw might avoid a future shot.
 	 */
+
+	@Override
 	public void onHitByBullet(HitByBulletEvent e) {
 		turnLeft(90 - e.getBearing());
 	}
