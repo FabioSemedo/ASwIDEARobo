@@ -32,12 +32,15 @@ public class MeuDeus extends AdvancedRobot {
 
     //o robô viu outro robô e agora?
     public void onScannedRobot(ScannedRobotEvent e) {
-        if(getGunHeat()==0) fire(1);
+        //Fabs: Considera usar isto:
+        // Adjust radar to keep tracking the enemy
+        // setTurnRadarRight(robocode.util.Utils.normalRelativeAngleDegrees(enemyAbsBearing - getRadarHeadingRadians()) * 2);
         circularTargeting(e);
     }
 
-    //Fabs: By convention methods like this should not start with a capital letter. The same is true for variables. (reserved for Objects/Classes)
-    //Fabs: This does not seem to finish. I think there might be a logic error.
+    //Fabs: Por convenção, métodos como este não devem começar por letra maiúscula. O mesmo acontece para as variáveis. (reservado para Objectos/Classes)
+    //Fabs: Isto parece não terminar. Penso que pode haver um erro de lógica.
+    //Fabs: Infinite Loop???
     public void circularTargeting ( ScannedRobotEvent e){
 
         //CRIAR A VARIAVEL INICIAL DIRECAOINIMIGOINICIAL NAO ESQUECER!!!!
@@ -92,7 +95,6 @@ public class MeuDeus extends AdvancedRobot {
 
 
         //SIMULAÇÃO DO MOVIMENTO
-        //Fabs: Infinite Loop???
         while (tempoAtual * MyBulletSpeed < Point2D.distance(atualX, atualY, FuturoInimigoX, FuturoInimigoY)) {
             FuturoInimigoX += velocidadeInimigo * Math.sin(direcaoInimigo); // atualiza "teoricamente" o x do inimigo
             FuturoInimigoY += velocidadeInimigo * Math.cos(direcaoInimigo); // atualiza "teoricamente" o y do inimigo
@@ -112,8 +114,10 @@ public class MeuDeus extends AdvancedRobot {
             // checar se a arma pode atirar pq se não puder,
             // podemos perder a direção do inimigo
             if (getGunHeat() == 0) {
+                //Fabs: Considera usar setFire(). Como atirar custa un turno, usar setFire permite que outras ações poção ser feitas no mesmo turno (ex movimentar).
                 fire(MyBulletPower);
             } else {
+                //Fabs: setTurnGunRight().
                 turnGunRight(ajustarAnguloArma);
                 // se a arma nao esta preparada para atirar, apenas ajustar
 
