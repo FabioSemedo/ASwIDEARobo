@@ -57,7 +57,7 @@ class Tools {
  * @author Fabio Semedo
  */
 
-public class Hellorobot extends AdvancedRobot {
+public class HelloRobot extends AdvancedRobot {
     public Point2D.Double enemyLocation;
     public double enemyAbsBearing = 0;
     double enemySpeed = -1;
@@ -71,104 +71,40 @@ public class Hellorobot extends AdvancedRobot {
 		setRadarColor(Color.lightGray);
 		setBulletColor(Color.red);
 
-        setAdjustRadarForGunTurn(true);
         setAdjustGunForRobotTurn(true);
 
 
 		while (true) {
-			setAhead(100);
-			setTurnRight(180);
-            if(!found){
-                turnRadarRight(45);
-            }
+            //Note that we are probably never going to come back to the run() function once we scan an enemy
+			turnGunRight(360*360);
 		}
 	}
 
 	@Override
 	public void onScannedRobot(ScannedRobotEvent e){
         found = true;
+        // absoluteBearing represents the direction from our bot to the enemy.
+        // It is calculated by adding the bot’s current heading to the bearing of the enemy relative to our bot.
+        // This gives us the absolute direction of the enemy in the battlefield.
         double absoluteBearing = getHeading() + e.getBearing(); // Direction of the enemy relative to this point
         enemyLocation =Tools.project(getX(), getY(), absoluteBearing, e.getDistance());
         if(enemySpeed==-1) enemySpeed = e.getVelocity();
         perfectRadar(e);
-        setFire(1);
     }
 
     public void perfectRadar(ScannedRobotEvent e) {
-        double absoluteBearing;                 // Direction of the enemy relative to our location
-        Point2D.Double projectedEnemyLocation;  // Estimated enemy location in the next tick
-        double radarRotation;                   // Estimated radar rotation for next scan
-        Point2D.Double eLocation;               // Enemy's co-ordinates
+        double absoluteBearing = getHeading() + e.getBearing(); // Direction of the enemy relative to this point
+        double radarTurn = normalRelativeAngleDegrees(absoluteBearing - getRadarHeading()); // Radar rotation
 
-        absoluteBearing = getHeading() + e.getBearing();
-        eLocation = Tools.project(getX(), getY(), absoluteBearing, e.getDistance());
-
-        projectedEnemyLocation = Tools.project(eLocation, normalRelativeAngleDegrees(e.getHeading()), e.getVelocity());
-
-        radarRotation = normalRelativeAngle(getRadarHeading()) - Math.atan( (projectedEnemyLocation.x - getX()) /(projectedEnemyLocation.y - getY()));
-
-        // Choosing minimum rotation (right vs left)
-        if(radarRotation==0){
-            scan();
-        }else if(radarRotation > Math.PI){
-            radarRotation = Math.PI - radarRotation;
+        // Rotate slightly ahead of the enemy to maintain lock and auto-scan
+        if(radarTurn < 0){
+            radarTurn += -0.02;
+        }else{
+            radarTurn += 0.02;
         }
-        setTurnRadarRightRadians(radarRotation);
+
+//        setTurnRadarRight(radarTurn * 2);
+        setTurnGunRight(radarTurn * 2);
     }
-
-    @Override
-    public void onBulletHit(BulletHitEvent e){
-
-    }
-
-    public void printToFile(ScannedRobotEvent e){
-        double absBearing = getHeading() + e.getHeading();
-		double absBearingRadians = getHeadingRadians() + e.getHeadingRadians();
-
-        setTurnRadarRightRadians(robocode.util.Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
-        String str = String.format("""
-                        «Testing angle normalisation functions:»
-                        absBearing Dg || Rd:
-                        %.3f\t%.3f
-                        normalRelativeAngle Dg || Rd:
-                        %.3f\t%.3f
-                        normalRelativeAngleDegrees Dg || Rd:
-                        %.3f\t%.3f
-                        """,
-                absBearing, absBearingRadians,
-                normalRelativeAngle(absBearing), normalRelativeAngle(absBearingRadians),
-                normalRelativeAngleDegrees(absBearing), normalRelativeAngleDegrees(absBearingRadians));
-
-        PrintStream w = null;
-        try {
-            w = new PrintStream(new RobocodeFileOutputStream(("stdOut.dat"), true));
-
-            w.println(str);
-
-            // PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-            if (w.checkError()) {
-                out.println("I could not write the str!");
-            }
-        } catch (IOException exp) {
-            out.println("IOException trying to write: ");
-            exp.printStackTrace(out);
-        } finally {
-            if (w != null) {
-                w.close();
-            }
-        }
-    }
-
-	/**
-	 * We were hit!  Turn perpendicular to the bullet,
-	 * so our seesaw might avoid a future shot.
-	 */
-
-	@Override
-	public void onHitByBullet(HitByBulletEvent e) {
-		turnLeft(90 - e.getBearing());
-	}
-
-
 }												
 
