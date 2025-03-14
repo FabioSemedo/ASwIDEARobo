@@ -7,9 +7,9 @@ public class Wave {
     long startTime;             //Time (turn) of enemy fire. This is typically current_time - 1
     double bulletSpeed;         //Assumed bullet speed based on energy drop
     double directAngle;         //Direction (radians [-pi,pi)) of thisBot relative to enemy.
-    int direction;              //Change in enemy's Firing angle relative to thisBot's movement. 1 Clockwise, -1 anticlockwise.
+    int direction;              // 1 or -1. Change in enemy's Firing angle relative to thisBot's movement. 1 Clockwise, -1 anticlockwise.
 
-    // the Wave's constructor parameters must be adjusted for the enemy's position 2 ticks before the current radar scan
+    // the Wave's constructor parameters must be adjusted for the enemy's position 1 tick before the current radar scan
     // affecting x, y, and startTime
     public Wave(long startTime, Point2D.Double enemyLocation, double enemyAbsBearing, double bulletSpeed)
     {

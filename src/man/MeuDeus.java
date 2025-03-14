@@ -26,6 +26,7 @@ public class MeuDeus extends AdvancedRobot {
 
             turnGunRight(360);
 
+
             back(100);
         }
     }
