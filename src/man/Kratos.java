@@ -5,11 +5,7 @@
 
 package man;
 
-import robocode.AdvancedRobot;
-import robocode.ScannedRobotEvent;
-import robocode.HitByBulletEvent;
-import robocode.CustomEvent;
-import robocode.Condition;
+import robocode.*;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -78,6 +74,8 @@ public class Kratos extends AdvancedRobot {
         /*
             Aiming
          */
+
+        perfectRadar(e);
         double distanciaInimigo = e.getDistance(); //Distancia do inimigo
         double direcaoInimigo = getHeadingRadians() + e.getBearingRadians(); // direcao que o inimigo esta
         double AnguloInimigo = getHeading() + e.getBearing(); // angulo do inimigo em relacao a mim
@@ -121,7 +119,8 @@ public class Kratos extends AdvancedRobot {
                 setFire(MyBulletPower);
                 OndaContraria tiro = new OndaContraria(getX(), getY(), getTime(), MyBulletSpeed, direcaoInimigo , getdirection(e), dadosLoc);
                 //crio a onda correspondente a bala
-                tiro.histograma(InimigoX, InimigoY, getTime());
+
+                dadosLoc = tiro.histograma(InimigoX, InimigoY, getTime(), anguloMaximo(MyBulletPower));
                 //coloco a informação no histograma
             }
 
@@ -178,12 +177,8 @@ public class Kratos extends AdvancedRobot {
         return newWave;
     }
 
-    @Override
-    public void onHitByBullet(HitByBulletEvent e){
-
+    public void BulletHitEvent (BulletHitEvent e) {
         contador++;
-
-
     }
 
     public void moveSafely(ScannedRobotEvent e) {
@@ -299,6 +294,21 @@ public class Kratos extends AdvancedRobot {
         return  melhor;
     }
 
+    public void perfectRadar(ScannedRobotEvent e) {
+        double absoluteBearing = getHeading() + e.getBearing(); // Direction of the enemy relative to this point
+        double radarTurn = normalRelativeAngleDegrees(absoluteBearing - getRadarHeading()); // Radar rotation
+
+        // Rotate slightly ahead of the enemy to maintain lock and auto-scan
+        if(radarTurn < 0){
+            radarTurn = radarTurn - 0.02;
+        }else{
+            radarTurn = radarTurn + 0.02;
+        }
+
+//        setTurnRadarRight(radarTurn * 2);
+        setTurnGunRight(radarTurn * 2);
+    }
+
     // essa função nos devolve o angulo maximo que o inimigo pode usar para escapar do nosso tiro
     public double anguloMaximo(double MyBulletSpeed){
 
@@ -327,4 +337,6 @@ public class Kratos extends AdvancedRobot {
     }
 
 }
+
+
 
