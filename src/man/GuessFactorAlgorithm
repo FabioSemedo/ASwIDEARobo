@@ -1,0 +1,40 @@
+// The following psuedocode details, in broad strokes, the wave management part of GuessFactor targeting.
+Wave{
+    fireTime; //Momento do tiro
+    myX; //Nossas coordenadas
+    myY; //Nossas coordenadas
+    enemyX; //Coordenadas do inimigo
+    enemyY; //Coordenadas do inimigo
+    bulletSpeed; //Velocidade da bala
+    distanceTraveled; //Distancia que a bala ja ando
+}
+
+ArrayList<Wave> tiros;
+
+//No momento do tiro:
+    //Nota que terias que decidir a poder da bala praviamento ao atirar.
+    //bulletSpeed = 20 - (3 * bulletPower);
+    tiros.add(new Wave(getTime(), getX(), getY(), bulletSpeed);
+
+//Todos os ticks nos atualisamos o ArrayList tiros:
+    for( i < tiros.size )
+        tiros[i].distanceTraveled = bulletSpeed * (curretTime() - fireTime); // Distancia = Velocidade * tempo
+        //Usando Pitagoras calculamos a distancia da bala e se o inimigo ja excapo a bala
+        //true => inimigo escapo; false => bala ainda pode acertar
+        distanciaInimigoAtual = Math.sqrt((tiros[i].myY - enemyX_atual)**2 + (tiros[i].myX - enemyX_atual)**2) // Distancia atual do inimigo em relacao ao ponto inicial do tiro
+        if(tiros[i].distanceTraveled > distanciaInimigoAtual)
+            // Calcular o angolo de tiro que deviamos ter usado e atualizar o histagrama do GuessFactor
+            // Lembra de normalizar o angolo com forme os requisitos do guessfactor
+            histograma.atualizar(ponto_do_tiro, localizacao_inimigo_atual);
+        endIf
+    endFor
+
+//Acertamos no inimigo:
+    onBulletHit(e)
+        Wave waveHit = tiros.search(e.Bullet.getX(), e.Bullet.getY()) // procurar pela bala mais proxima a estas Coordenadas
+        //Calcular o cangolo do tiro, para atualizar o GuessFactorhistograma
+        angoloDoTiro = funcao(waveHit.myX, waveHit.myY, e.Bullet.getX(), e.Bullet.getY());
+        //atualizar o histograma. Lembra de normalizar o angolo com forme os requisitos do guessfactor
+        histograma.update(angoloDoTiro)
+
+
