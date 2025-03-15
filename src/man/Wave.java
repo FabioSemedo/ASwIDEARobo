@@ -9,7 +9,7 @@ public class Wave {
     double directAngle;         //Direction (radians [-pi,pi)) of thisBot relative to enemy. Enemy's base targeting angle for deciding where to fire.
     int direction;              // 1 or -1. Change in enemy's Firing angle in response to thisBot's movement. 1 Clockwise, -1 anticlockwise.
 
-    // the Wave's constructor parameters must be adjusted for the enemy's position 1 tick before the current radar scan
+    // the Wave's constructor parameters must use the enemy's position 1 tick before the time of current radar scan
     // affecting x, y, and startTime
     public Wave(long startTime, Point2D.Double enemyLocation, double enemyAbsBearing, double bulletSpeed, int direction)
     {
@@ -20,18 +20,15 @@ public class Wave {
         this.direction = direction;
     }
 
+    public static int calcDirection(double myVelocity, double myHeading, double enemyAbsBearing) {
+//      double relativeHeading = robocode.util.Utils.normalRelativeAngleDegrees(myHeading - enemyAbsBearing);
+//      relativeHeading = Math.toRadians(relativeHeading);
+        if(Math.sin(Math.toRadians(robocode.util.Utils.normalRelativeAngleDegrees(myHeading - enemyAbsBearing))) * myVelocity>= 0)
+            return 1;
+        return -1;
+    }
+
     public double distanceTraveled(long currentTime){
         return (currentTime-startTime)*bulletSpeed;
     };
-
-    public double getCurrentRadius(long currentTime)
-    {
-        return (double) ((currentTime - startTime) * bulletSpeed);
-    }
-
-    public double bulletSpeed(double energy){
-        if(energy>3) return 0.0;
-
-        return 20 - (3.0 * energy);
-    }
 }

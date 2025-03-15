@@ -1,5 +1,11 @@
-/* Apollo Tank written by [her] and [I].
- * Credit for the core of the Wave Surfing algorithm: Patrick "Voidious" Cupka at https://robowiki.net/wiki/Wave_Surfing_Tutorial on 11/03/2025, and Vincent Maliko from https://github.com/malikov/robocode/blob/master/WaveSurfer.java on 11/03/2025
+/* Apollo Tank written by Maria A. and Fábio S.
+ *
+ * The movement of this bot was adapted from the wave surfing algorithm, due credit to:
+ *   Patrick "Voidious" Cupka, Wave Surfing Tutorial, at https://robowiki.net/wiki/Wave_Surfing_Tutorial on 11/03/2025,
+ *   Vincent Maliko, code of the Wave Surfing Tutorial by "Voidious", at https://github.com/malikov/robocode/blob/master/WaveSurfer.java on 11/03/2025,
+ * Additional help:
+ *   "Kawigi" ,GuessFactor Targeting Tutorial , at https://robowiki.net/wiki/GuessFactor_Targeting_Tutorial
+ *   ChatGPT , code and learning assistant, https://chatgpt.com/.
  */
 
 package man;
@@ -17,6 +23,7 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
+
 
 public class WaveSurferBot extends AdvancedRobot {
     //space for GuessFactor targeting indexes
@@ -64,7 +71,7 @@ public class WaveSurferBot extends AdvancedRobot {
         }
     }//end run()
 
-    //Escape walls
+    //Escape walls if we spawn there
     public void onCustomEvent(CustomEvent e) {
         if (e.getCondition().getName().equals("walled")) {
             double range = FIELD_CENTRE_RANGE;
@@ -74,7 +81,9 @@ public class WaveSurferBot extends AdvancedRobot {
             double angleToCentre;
 
             //Check for out of bounds
-            if( (getBattleFieldHeight() < FIELD_CENTRE_RANGE*2) || (getBattleFieldWidth() < FIELD_CENTRE_RANGE*2)){
+            if( (getBattleFieldHeight() < FIELD_CENTRE_RANGE*2)
+                || (getBattleFieldWidth() < FIELD_CENTRE_RANGE*2)
+            ){
                 range = Math.min(getBattleFieldHeight(), getBattleFieldWidth())*0.05;
             }
 
@@ -93,7 +102,7 @@ public class WaveSurferBot extends AdvancedRobot {
                 setAhead(20); // Move in small steps
 
                 //keep scanning to continue the flow of operations
-                perfectRadar(Tools.absoluteBearing(myLocation, enemyLocation));
+                perfectRadar(Tools.absoluteBearing(new Point2D.Double(getX(), getY()), enemyLocation));
 
                 execute(); // Execute the movement
             }
@@ -122,12 +131,13 @@ public class WaveSurferBot extends AdvancedRobot {
             radarTurn = radarTurn + 0.02;
         }
 
+        //Making the radar over-scan tends to keep it from losing the enemy
         setTurnRadarRight(radarTurn * 2);
     }
 
-    //Checks if enemy fired and updates Wave ArrayList based on energy drops. Returns
+    //Checks if enemy fired and updates Wave ArrayList based on energy drops.
     public void waveHandler(ScannedRobotEvent e) {
-        double enemyAbsBearing = getHeadingRadians() + e.getBearingRadians();
+        double enemyAbsBearing = getHeading() + e.getBearing();
         double bulletPower;
 
 /*       ArrayList<Integer> _surfDirections = new ArrayList<Integer>();
@@ -142,13 +152,8 @@ public class WaveSurferBot extends AdvancedRobot {
         // Detect enemy fire
         bulletPower = Math.min(3, enemyEnergy - e.getEnergy());
         if (bulletPower > 0.85 && bulletPower <= 3) {
-            int direction = 1;
+            int direction = Wave.calcDirection(getVelocity(), getHeading(), enemyAbsBearing);
             double bulletSpeed = 20 - (3 * bulletPower);
-            double relativeBearing = robocode.util.Utils.normalRelativeAngle(getHeadingRadians() - enemyAbsBearing);
-
-            if(Math.sin(relativeBearing) * getVelocity() < 0){
-                direction = -1;
-            }
 
             waves.add(new Wave(getTime() -1 , enemyLocation, enemyAbsBearing, bulletSpeed, direction));
         }
@@ -156,7 +161,6 @@ public class WaveSurferBot extends AdvancedRobot {
         // Move perpendicular to enemy while avoiding walls
         double absoluteBearing = getHeading() + e.getBearing();
         double bearingFromGun = robocode.util.Utils.normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
-
 
         // Update last known enemy energy level for the next turn
         enemyEnergy = e.getEnergy();
@@ -173,12 +177,16 @@ public class WaveSurferBot extends AdvancedRobot {
         for (int i = 0; i < waves.size(); i++) {
             Wave enemyWave = waves.get(i);
 
-            // Remove waves that have passed
+            // Remove waves that have passed (with tolerance)
             if (enemyWave.distanceTraveled(getTime()) > myLocation.distance(enemyWave.startPoint) + 50) {
                 waves.remove(i);
                 i--;
             }
         }
+    }
+
+    public void goWaveSurf(){
+
     }
 
     @Override
@@ -187,14 +195,56 @@ public class WaveSurferBot extends AdvancedRobot {
     }
 
     public void waveHit(HitByBulletEvent e){
+        double blX = e.getBullet().getX();
+        double blY = e.getBullet().getY();
+        double blRelativeHeading = normalRelativeAngleDegrees(e.getBullet().getHeading());
+        double blSpeed = e.getBullet().getVelocity();
+        Wave hitWave = null;
+
         for(Wave w : waves){
-            // check if the speeds match with tolerance
-            if( ((e.getBullet().getVelocity() - 0.2) <=  w.bulletSpeed) && (w.bulletSpeed <= (e.getBullet().getVelocity()+0.2)))
-            {
-
+            // check if the speeds and timing match some wave (with a little tolerance)
+            if( (Math.abs(w.distanceTraveled(getTime()) - w.startPoint.distance(myLocation)) <= 10) //Compare distances myLocation-to-waveStartPoint and waveDistanceTraveled
+                && (Math.abs(w.bulletSpeed - blSpeed) <= 0.1) // compare speed of the bullet that hit us to the waveBulletSpeed
+            ){
+                hitWave = w;
             }
-
         }
+
+        // If we found a matching wave, update the stats.
+        if (hitWave != null) {
+            Point2D.Double hitLocation = new Point2D.Double(getX(), getY());
+
+            // Calculate the offset angle and normalise it:
+            // This is the difference between our Bearing at the wave's fireTime and our Bearing at the time of the hit; Relative to waveStartPoint.
+            // Normalised the angle to the range [-180, 180].
+            double normalizedOffset = normalRelativeAngleDegrees(Tools.absoluteBearing(hitWave.startPoint, hitLocation) - hitWave.directAngle);
+
+            // Divide by the maximum escape angle (which depends on bullet velocity) and multiply by (-1 or 1) the wave's direction.
+            double guessFactor = normalizedOffset / maxEscapeAngle(hitWave.bulletSpeed) * hitWave.direction;
+
+            // Map the guess factor from [-1, 1] to a bin index (our bins are the elements of the surfStats defined as Guess_Factor_Range)
+            int index = (int) limit(0, (guessFactor * ((GUESS_FACTOR_RANGE - 1) / 2.0)) + ((GUESS_FACTOR_RANGE - 1) / 2.0), GUESS_FACTOR_RANGE - 1);
+
+            // Increment the stat for this guess factor.
+            surfStats[index]++;
+
+            // Remove the wave so it isn't used again.
+            waves.remove(hitWave);
+        }
+    }
+
+    public static double limit(double min, double value, double max) {
+        if(value < min){
+            return min;
+        }else if(value > max){
+            return max;
+        }
+        return value;
+    }
+
+    //Method taken from the Robowiki Wave Surfing Turorial
+    public static double maxEscapeAngle(double velocity) {
+        return Math.sin(8.0/velocity);
     }
 
     //Method taken and adapted from the Robowiki Wave Surfing Turorial
