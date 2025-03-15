@@ -36,5 +36,3 @@ ArrayList<Wave> tiros;
         angoloDoTiro = funcao(waveHit.myX, waveHit.myY, e.Bullet.getX(), e.Bullet.getY());
         //atualizar o histograma. Lembra de normalizar o angolo com forme os requisitos do guessfactor
         histograma.update(angoloDoTiro)
-
-

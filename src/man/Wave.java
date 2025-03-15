@@ -11,12 +11,13 @@ public class Wave {
 
     // the Wave's constructor parameters must be adjusted for the enemy's position 1 tick before the current radar scan
     // affecting x, y, and startTime
-    public Wave(long startTime, Point2D.Double enemyLocation, double enemyAbsBearing, double bulletSpeed)
+    public Wave(long startTime, Point2D.Double enemyLocation, double enemyAbsBearing, double bulletSpeed, int direction)
     {
         this.startPoint = enemyLocation;
         this.bulletSpeed = bulletSpeed;
         this.startTime = startTime;
         this.directAngle = enemyAbsBearing;
+        this.direction = direction;
     }
 
     public double distanceTraveled(long currentTime){

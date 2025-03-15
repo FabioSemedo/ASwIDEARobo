@@ -19,13 +19,14 @@ import java.util.ArrayList;
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 public class WaveSurferBot extends AdvancedRobot {
-    // Battlefield dimensions for wall smoothing
-    private static final int WALL_SPACE = 100; // minimum pixels we keep from the wall
-    private static final int MIN_WALL_SPACE = 40; // minimum pixels we keep from the wall
-    private static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
-
+    //space for GuessFactor targeting indexes
     private static final int GUESS_FACTOR_RANGE = 47;
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
+
+    // Battlefield dimensions for wall smoothing
+    private static final int WALL_STICK = 150; // minimum pixels we keep from the wall
+    private static final int MIN_WALL_SPACE = 72; // minimum pixels we keep from the wall.
+    private static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
 
     public Point2D.Double myLocation;       // Where the enemy last saw us
     public Point2D.Double enemyLocation;    // Where we last saw the enemy
@@ -33,7 +34,7 @@ public class WaveSurferBot extends AdvancedRobot {
     public ArrayList<Wave> waves;     // List of active waves
     public ArrayList<Integer> surfDirections;   // Directions of past movements, Clockwise 1 or anticlockwise -1
 
-    public ArrayList<Double> waveAbsBearings;   // Absolute bearings of point of fire from past scans
+    public ArrayList<Double> waveAbsBearings;   // Absolute bearings at of point of fire from past scans
 
     public static double enemyEnergy = 100.0;   // Enemy's last known energy level
 
@@ -42,7 +43,10 @@ public class WaveSurferBot extends AdvancedRobot {
         setGunColor(Color.red);
         setRadarColor(Color.black);
         setBulletColor(Color.red);
+
         myLocation = new Point2D.Double(getX(), getY());
+        waves = new ArrayList<Wave>();
+        surfDirections = new ArrayList<Integer>();
 
         //Too close to a wall
         addCustomEvent(new Condition("walled") {
@@ -99,7 +103,7 @@ public class WaveSurferBot extends AdvancedRobot {
 
     public void onScannedRobot(ScannedRobotEvent e) {
         perfectRadar(e.getBearing());
-        checkWave(e);
+        waveHandler(e);
         //surfWaves();
 
         /*
@@ -122,10 +126,9 @@ public class WaveSurferBot extends AdvancedRobot {
     }
 
     //Checks if enemy fired and updates Wave ArrayList based on energy drops. Returns
-    public boolean checkWave(ScannedRobotEvent e) {
+    public void waveHandler(ScannedRobotEvent e) {
         double enemyAbsBearing = getHeadingRadians() + e.getBearingRadians();
         double bulletPower;
-        boolean newWave = false;
 
 /*       ArrayList<Integer> _surfDirections = new ArrayList<Integer>();
 
@@ -138,15 +141,22 @@ public class WaveSurferBot extends AdvancedRobot {
 
         // Detect enemy fire
         bulletPower = Math.min(3, enemyEnergy - e.getEnergy());
-        if (bulletPower > 0 && bulletPower <= 3) {
+        if (bulletPower > 0.85 && bulletPower <= 3) {
+            int direction = 1;
             double bulletSpeed = 20 - (3 * bulletPower);
-            waves.add(new Wave(getTime() -1 , enemyLocation, enemyAbsBearing, bulletSpeed));
-            newWave = true;
+            double relativeBearing = robocode.util.Utils.normalRelativeAngle(getHeadingRadians() - enemyAbsBearing);
+
+            if(Math.sin(relativeBearing) * getVelocity() < 0){
+                direction = -1;
+            }
+
+            waves.add(new Wave(getTime() -1 , enemyLocation, enemyAbsBearing, bulletSpeed, direction));
         }
 
         // Move perpendicular to enemy while avoiding walls
         double absoluteBearing = getHeading() + e.getBearing();
         double bearingFromGun = robocode.util.Utils.normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+
 
         // Update last known enemy energy level for the next turn
         enemyEnergy = e.getEnergy();
@@ -154,68 +164,56 @@ public class WaveSurferBot extends AdvancedRobot {
         enemyLocation = Tools.project(myLocation, enemyAbsBearing, e.getDistance());
         // Update
         myLocation.setLocation(getX(),getY());
-        return newWave;
+
+        updateWaves();
+        //goWaveSurf();
+    }
+
+    public void updateWaves() {
+        for (int i = 0; i < waves.size(); i++) {
+            Wave enemyWave = waves.get(i);
+
+            // Remove waves that have passed
+            if (enemyWave.distanceTraveled(getTime()) > myLocation.distance(enemyWave.startPoint) + 50) {
+                waves.remove(i);
+                i--;
+            }
+        }
     }
 
     @Override
     public void onHitByBullet(HitByBulletEvent e){
-
+        waveHit(e);
     }
 
-    public void moveSafely(ScannedRobotEvent e) {
-        double angle = e.getBearing() + 90; // Perpendicular movement
-        if (Math.random() > 0.5) angle *= -1; // Randomly flip direction
+    public void waveHit(HitByBulletEvent e){
+        for(Wave w : waves){
+            // check if the speeds match with tolerance
+            if( ((e.getBullet().getVelocity() - 0.2) <=  w.bulletSpeed) && (w.bulletSpeed <= (e.getBullet().getVelocity()+0.2)))
+            {
 
-        double moveDistance = 100;
-        double newX = getX() + Math.sin(Math.toRadians(getHeading() + angle)) * moveDistance;
-        double newY = getY() + Math.cos(Math.toRadians(getHeading() + angle)) * moveDistance;
-
-        // Check if this move would hit a wall
-
-        if (isNearWall(newX, newY)) {
-            if(newX < 50){ // LeftWall
-                angle = 0;
             }
 
-            else if(newX > getWidth()-50){ //RightWall
-                angle = getHeading() ;
-            }
-
-            else if(newY < 50){// BottomWall
-                angle = getHeading() ;
-            }
-
-            else if(newY > getHeading()-50){ // TopWall
-                angle += 45; // Adjust to slide along the wall
-            }
         }
-
-        setTurnRight(angle);
-        setAhead(moveDistance);
     }
 
     //Method taken and adapted from the Robowiki Wave Surfing Turorial
+    // botLocation - our co-ordinates
+    // angle - try to find an angle that will keep us away from a wall
+    // orientation - (1 or -1), informs if angle turns right (1) or angle turns left (-1)
     public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
-        while (isNearWall(Tools.project(botLocation, angle, WALL_SPACE))) {
+        while (isNearWall(Tools.project(botLocation, angle, WALL_STICK), WALL_STICK)) {
             angle += orientation*0.05;
         }
         return angle;
     }
 
-    private boolean isNearWall(double x, double y, int minSpace) {
+    private boolean isNearWall(double x, double y, double minSpace) {
         return ((x < minSpace) || (x > (getBattleFieldWidth() - minSpace)) ||
                 (y < minSpace) || (y > getBattleFieldHeight() - minSpace) );
     }
-    private boolean isNearWall(double x, double y) {
-        return isNearWall(x, y, WALL_SPACE);
-    }
-    private boolean isNearWall(Point2D.Double point) {
-        return isNearWall(point.x, point.y);
-    }
-
-    private boolean isNearCentre(double x, double y, int range) {
-        return  ((getBattleFieldWidth()/2 - range) <= x) && (x <= (getBattleFieldWidth()/2 + range)) ||
-                ((getBattleFieldHeight()/2 - range) <= y) && (y <= (getBattleFieldHeight()/2 + range));
+    private boolean isNearWall(Point2D.Double point, double minSpace) {
+        return isNearWall(point.x, point.y, minSpace);
     }
 
 }
