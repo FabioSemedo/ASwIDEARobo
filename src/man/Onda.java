@@ -1,7 +1,7 @@
 package man;
 
 import robocode.AdvancedRobot;
-import java.awt.geom.Point2D;
+
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 public class Onda {
@@ -14,7 +14,7 @@ public class Onda {
     double direcaoInicial; //direcao que nosso esta olhando
     int [] histograma;
     int EsqDir;
-    Onda(long startTime, double x, double y, double inimigoX, double inimigoY, double MybulletSpeed, double distancia, double minhadirecao, int [] dados, int caminho)
+    Onda(long startTime, double x, double y, double inimigoX, double inimigoY, double MybulletSpeed, double minhadirecao, int [] dados, int caminho)
     {
         fireTime = startTime; //Momento do tiro
         myX = x; //Nossas coordenadas
@@ -29,29 +29,14 @@ public class Onda {
 
 
 
-    //distancia que a bala viajou
-    public double distanceTraveled(long currentTime)
+
+    public boolean proximo(double balaX, double balaY)
     {
-        return (currentTime-fireTime)*bulletSpeed;
-    };
-     // o inimigo escapou?
+        return((Math.abs(myX - balaX) < 10)&&(Math.abs(myY - balaY) < 10));
 
-    public boolean escapou ( double enemyXAtual, double enemyYAtual,long tempoAtual)
-    {
-
-        double distanciaInimigoAtual = Point2D.distance(myX, myY, enemyXAtual, enemyYAtual);
-
-        if (distanceTraveled(tempoAtual) > distanciaInimigoAtual)
-        {
-            return true;
         }
-        return false;
-    }
-
-    public void ThisBullet(double balaX, double balaY, long tempoTiro){
 
 
-    }
 
 
     // essa função nos devolve o angulo maximo que o inimigo pode usar para escapar do nosso tiro
