@@ -1,7 +1,7 @@
 package man;
 
 import robocode.AdvancedRobot;
-import java.awt.geom.Point2D;
+
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 public class Onda {
@@ -29,34 +29,12 @@ public class Onda {
 
 
 
-    //distancia que a bala viajou
-    public double distanceTraveled(long currentTime)
-    {
-        return (currentTime-fireTime)*bulletSpeed;
-    };
-     // o inimigo escapou?
-
-    public boolean escapou ( double enemyXAtual, double enemyYAtual,long tempoAtual)
-    {
-
-        double distanciaInimigoAtual = Point2D.distance(myX, myY, enemyXAtual, enemyYAtual);
-
-        if (distanceTraveled(tempoAtual) > distanciaInimigoAtual)
-        {
-            return true;
-        }
-        return false;
-    }
 
     public boolean proximo(double balaX, double balaY)
     {
-        if ((Math.abs(myX - balaX) < 10)&&(Math.abs(myY - balaY) < 10)){
+        return((Math.abs(myX - balaX) < 10)&&(Math.abs(myY - balaY) < 10));
 
-            return true;
         }
-
-        return false;
-    }
 
 
 
