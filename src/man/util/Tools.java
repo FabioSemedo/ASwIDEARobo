@@ -29,7 +29,6 @@ public class Tools {
     public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
         return Math.atan2(target.x - source.x, target.y - source.y);
     }
-
     public static double absoluteBearing(double sourceX, double sourceY, double targetX, double targetY) {
         return Math.atan2(targetX - sourceX, targetY - sourceY);
     }
