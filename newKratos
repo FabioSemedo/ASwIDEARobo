@@ -1,5 +1,5 @@
 /** Apollo Tank written by [her] and [I].
- *
+
  * Credit for the core of the Wave Surfing algorithm: Patrick "Voidious" Cupka at https://robowiki.net/wiki/Wave_Surfing_Tutorial on 11/03/2025, and Vincent Maliko from https://github.com/malikov/robocode/blob/master/WaveSurfer.java on 11/03/2025
  */
 
@@ -88,7 +88,7 @@ public class Kratos extends AdvancedRobot {
         //localizacao atual do inimigo em x
         double InimigoY = getY() + Math.cos(direcaoInimigo) * distanciaInimigo;
         //localizacao atual do inimigo em x
-        Point2D.Double Inimigo = new Point2D.Double(InimigoX, InimigoY);
+
 
         // VARIAVEIS RELATIVAS AO PODER DE FOGO NOSSO ROBÔ
         double MyBulletPower = Math.min(3, getEnergy() - 0.1);
@@ -99,12 +99,10 @@ public class Kratos extends AdvancedRobot {
         double ajustarAnguloArma;
 
         //direcao da fuga
-        int caminho = 1;
+        int caminho = 1; //direita
         if (e.getVelocity() != 0) {
 
-            if (Math.sin((e.getHeadingRadians() - (getHeadingRadians() + e.getHeadingRadians())) * e.getVelocity()) < 0) {
-                caminho =  1; //direita
-            } else {
+            if (Math.sin((e.getHeadingRadians() - (getHeadingRadians() + e.getHeadingRadians())) * e.getVelocity()) >= 0) {
                 caminho =  -1; //esquerda
             }
         }
@@ -129,7 +127,7 @@ public class Kratos extends AdvancedRobot {
             // podemos perder a direção do inimigo
             if (getGunHeat() == 0) {
                 setFire(MyBulletPower);
-                Onda disparo = new Onda(getTime(), getX(), getY(), InimigoX, InimigoY, MyBulletSpeed, distanciaInimigo, distanciaInimigo, dadosLoc, caminho);
+                Onda disparo = new Onda(getTime(), getX(), getY(), InimigoX, InimigoY, MyBulletSpeed, direcaoInimigo, dadosLoc, caminho);
                 //crio a onda correspondente a bala
                 tiros.add(disparo);
 
@@ -202,7 +200,7 @@ public class Kratos extends AdvancedRobot {
         double poderBala = bala.getPower();
         double balaVelocidade = 20 - 3*poderBala;
 
-        Onda retirar = null; //ainda nao sabemos qual Onda retirar
+
 
         for (Onda disparo: tiros)
         {
@@ -210,17 +208,15 @@ public class Kratos extends AdvancedRobot {
             {
                 if(proximo(bala.getX(), bala.getY()))
                 {
-                    retirar = disparo;
+                    disparo.updates(disparo.indice());
+                    tiros.remove(disparo);
                     break;
                 }
             }
 
 
         }
-        if (retirar != null) {
-            retirar.updates(retirar.indice());
-            tiros.remove(retirar);
-        }
+
 
 
         contador++;
