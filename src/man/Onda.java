@@ -14,7 +14,7 @@ public class Onda {
     double direcaoInicial; //direcao que nosso esta olhando
     int [] histograma;
     int EsqDir;
-    Onda(long startTime, double x, double y, double inimigoX, double inimigoY, double MybulletSpeed, double distancia, double minhadirecao, int [] dados, int caminho)
+    Onda(long startTime, double x, double y, double inimigoX, double inimigoY, double MybulletSpeed, double minhadirecao, int [] dados, int caminho)
     {
         fireTime = startTime; //Momento do tiro
         myX = x; //Nossas coordenadas
@@ -48,10 +48,17 @@ public class Onda {
         return false;
     }
 
-    public void ThisBullet(double balaX, double balaY, long tempoTiro){
+    public boolean proximo(double balaX, double balaY)
+    {
+        if ((Math.abs(myX - balaX) < 10)&&(Math.abs(myY - balaY) < 10)){
 
+            return true;
+        }
 
+        return false;
     }
+
+
 
 
     // essa função nos devolve o angulo maximo que o inimigo pode usar para escapar do nosso tiro
