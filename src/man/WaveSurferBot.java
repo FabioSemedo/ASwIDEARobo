@@ -32,7 +32,7 @@ public class WaveSurferBot extends AdvancedRobot {
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
 
     // Battlefield dimensions for wall smoothing
-    private static final int WALL_STICK = 100; // minimum pixels we keep from the wall
+    private static final int WALL_STICK = 150; // minimum pixels we keep from the wall
     private static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
 
     public Point2D.Double myLocation;       // Where the enemy last saw us
@@ -40,8 +40,6 @@ public class WaveSurferBot extends AdvancedRobot {
 
     public ArrayList<Wave> waves;     // List of active waves
     public ArrayList<Integer> surfDirections;   // Directions of past movements, Clockwise 1 or anticlockwise -1
-
-    public ArrayList<Double> waveAbsBearings;   // Absolute bearings at of point of fire from past scans
 
     public static double enemyEnergy = 100.0;   // Enemy's last known energy level
 
@@ -99,12 +97,10 @@ public class WaveSurferBot extends AdvancedRobot {
             for (int i = 0; i < distance; i += 20) {
                 waveAngle = Math.sin(i / 50.0) * 30;
                 setTurnRight(angleToCentre + waveAngle); // Slight left/right adjustments
-                setAhead(20); // Move in small steps
+                setAhead(WALL_STICK); // Move in small steps
 
                 //keep scanning to continue the flow of operations
-                perfectRadar(Tools.absoluteBearing(new Point2D.Double(getX(), getY()), enemyLocation));
-
-                execute(); // Execute the movement
+                perfectRadar(Math.toDegrees(Tools.absoluteBearing(new Point2D.Double(getX(), getY()), enemyLocation)));
             }
         }
     }
@@ -264,15 +260,6 @@ public class WaveSurferBot extends AdvancedRobot {
         }
     }
 
-    public static double limit(double min, double value, double max) {
-        if(value < min){
-            return min;
-        }else if(value > max){
-            return max;
-        }
-        return value;
-    }
-
     //maxEscapeAngle = Math.sin(8.0/bulletSpeed)
 
     //Method based on wallSmoothing from the Surfing Tutorial
@@ -280,7 +267,7 @@ public class WaveSurferBot extends AdvancedRobot {
     // orientation - (1 or -1), informs if angle turns right (1) or angle turns left (-1)
     public double wallSmoothing(Point2D.Double currectLocation, double angleRd, int orientation) {
         //decide if we need to turn to avoid walls and by how much
-        while (isNearWall(Tools.project(currectLocation, angleRd, WALL_STICK), WALL_STICK)) {
+        while (isNearWall(Tools.project(currectLocation, angleRd, WALL_STICK), WALL_STICK + 0.1)) {
             angleRd = angleRd + orientation*0.05;
         }
         return angleRd;
@@ -325,27 +312,37 @@ public class WaveSurferBot extends AdvancedRobot {
         double turnLimit;
         double moveAngle;
         double movementDirection;
+        double waveDistance;
+        double perpendicularAngle;
 
         int timeStep = 0;
         boolean reached = false;
 
-        do{
+        while(!reached && timeStep < 500){
+            waveDistance = wave.startPoint.distance(futurePosition);
+            perpendicularAngle = Math.PI / 2 * Math.min(1, waveDistance / (20 * wave.bulletSpeed));
+
             // Calculate movement angle considering walls
-            moveAngle = wallSmoothing(futurePosition, Tools.absoluteBearing(wave.startPoint, futurePosition) + (direction * (Math.PI / 2)), direction);
+            moveAngle = wallSmoothing(futurePosition, Tools.absoluteBearing(wave.startPoint, futurePosition) + (direction * perpendicularAngle), direction);
             moveAngle = moveAngle - heading; //Adjust for current heading
             movementDirection = 1;
 
             // Correct for downward movement
             if (Math.cos(moveAngle) < 0) {
-                movementDirection = -1;
                 moveAngle = moveAngle + Math.PI;
+                movementDirection = -1;
             }
 
             moveAngle = normalRelativeAngle(moveAngle);
-
             // Limit turning rate per tick according to the Surfing tutorial
             turnLimit = Math.PI / 720.0 * (40.0 - 3.0 * Math.abs(speed));
-            heading = normalRelativeAngle(heading + limit(-turnLimit, moveAngle, turnLimit));
+
+            if(moveAngle < -turnLimit) moveAngle = -turnLimit;
+            if(moveAngle > turnLimit) moveAngle = turnLimit;
+            if(-0.01 < moveAngle && moveAngle < 0.01) moveAngle = 0.01; //struggles with 0
+
+
+            heading = normalRelativeAngle(heading + moveAngle);
 
             // Adjust speed based on direction
             if(speed * movementDirection < 0){
@@ -366,7 +363,7 @@ public class WaveSurferBot extends AdvancedRobot {
             if (futurePosition.distance(wave.startPoint) < wave.bulletSpeed * (1 + timeStep + getTime() - wave.startTime) ) {
                 reached = true;
             }
-        } while (!reached && timeStep < 500);
+        }//end while
 
         return futurePosition;
     }
