@@ -5,7 +5,15 @@ import java.awt.geom.Point2D;
 public class Tools {
     //Note that trigonometry in Robocode has an offset of 90º anticlockwise
     //This results in us having x:sin and y:cos instead of x:cos and y:sin
+
     //Method taken from the Robowiki Wave Surfing Tutorial
+    /**
+     * @param sourceLocation is the origin point
+     * @param angle (radians) is the direction of translation
+     * @param length distance from origin
+     *
+     * @return A point in the direction and at a distance of from the origin
+     * */
     public static Point2D.Double project(Point2D.Double sourceLocation,
                                          double angle, double length) {
         return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length,
@@ -24,8 +32,7 @@ public class Tools {
         return (Math.atan2(destination.x - origin.x, destination.y - origin.y));
     }
 
-    //Method taken from Robowiki Wave Surfing Turorial
-    //Returns the direction, in  radians,  of a target point relative to a starting point
+    /**@return the direction, in  radians,  of a target point relative to a starting point*/
     public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
         return Math.atan2(target.x - source.x, target.y - source.y);
     }

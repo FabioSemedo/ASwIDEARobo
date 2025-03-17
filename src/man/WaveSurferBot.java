@@ -32,8 +32,7 @@ public class WaveSurferBot extends AdvancedRobot {
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
 
     // Battlefield dimensions for wall smoothing
-    private static final int WALL_STICK = 150; // minimum pixels we keep from the wall
-    private static final int MIN_WALL_SPACE = 72; // minimum pixels we keep from the wall.
+    private static final int WALL_STICK = 100; // minimum pixels we keep from the wall
     private static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
 
     public Point2D.Double myLocation;       // Where the enemy last saw us
@@ -59,7 +58,7 @@ public class WaveSurferBot extends AdvancedRobot {
         //Too close to a wall
         addCustomEvent(new Condition("walled") {
             public boolean test() {
-                return isNearWall(getX(), getY(), MIN_WALL_SPACE);
+                return isNearWall(getX(), getY(), WALL_STICK);
             }
         });
 
@@ -114,13 +113,14 @@ public class WaveSurferBot extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         perfectRadar(e.getBearing());
         waveHandler(e);
-        //surfWaves();
+        goWaveSurf();
 
         /*
             Aiming
          */
     }
 
+    //Continuous enemy scan
     public void perfectRadar(double enemyBearing) {
         double absoluteBearing = getHeading() + enemyBearing; // Direction of the enemy relative to this point
         double radarTurn = normalRelativeAngleDegrees(absoluteBearing - getRadarHeading()); // Radar rotation
@@ -132,7 +132,7 @@ public class WaveSurferBot extends AdvancedRobot {
             radarTurn = radarTurn + 0.02;
         }
 
-        //Making the radar over-scan tends to keep it from losing the enemy
+        //Making the radar over-shoot tends to keep it from losing the enemy
         setTurnRadarRight(radarTurn * 2);
     }
 
@@ -152,7 +152,7 @@ public class WaveSurferBot extends AdvancedRobot {
 
         // Detect enemy fire
         bulletPower = Math.min(3, enemyEnergy - e.getEnergy());
-        if (bulletPower > 0.85 && bulletPower <= 3) {
+        if (bulletPower >= 0.1 && bulletPower <= 3) {
             int direction = Wave.calcDirection(getVelocity(), getHeading(), enemyAbsBearing);
             double bulletSpeed = 20 - (3 * bulletPower);
 
@@ -187,31 +187,33 @@ public class WaveSurferBot extends AdvancedRobot {
     }
 
     public void goWaveSurf(){
-        Wave surfWave = getClosestSurfableWave();
-        if (surfWave == null) return;
+        Wave nextWave = getClosestSurfableWave();
+        if (nextWave == null) return;
 
         // Check danger for both directions
-        double dangerLeft = checkDanger(surfWave, -1);
-        double dangerRight = checkDanger(surfWave, 1);
+        double dangerLeft = checkDanger(nextWave, -1);
+        double dangerRight = checkDanger(nextWave, 1);
 
         // Choose the safer direction
-        double goAngle = Tools.absoluteBearing(surfWave.startPoint, myLocation);
+        double goAngleRd = Tools.absoluteBearing(nextWave.startPoint, myLocation);
         if (dangerLeft < dangerRight) {
-            goAngle = wallSmoothing(myLocation, goAngle - (Math.PI / 2), -1);
+            goAngleRd = wallSmoothing(myLocation, goAngleRd - (Math.PI / 2), -1);
         } else {
-            goAngle = wallSmoothing(myLocation, goAngle + (Math.PI / 2), 1);
+            goAngleRd = wallSmoothing(myLocation, goAngleRd + (Math.PI / 2), 1);
         }
 
         // Move in the chosen direction
-        setBackAsFront(this, goAngle);
+        setBackAsFront(this, goAngleRd);
     }
 
+    //Returns the wave that will arrive at our location the soonest
     public Wave getClosestSurfableWave(){
         //Start at the max possible time (longest path and slowest bullet)
         double shortestTime; // The closest arrival time of a wave to our location
-        shortestTime = Math.pow(getBattleFieldHeight(), 2) + Math.pow(getBattleFieldWidth(),2) ;
-        shortestTime = Math.sqrt(shortestTime); //Pythagoras for diagonal of the battlefield
-        shortestTime = shortestTime/(11); //Divided by the speed of bullet of power 3
+//        shortestTime <-- Math.pow(getBattleFieldHeight(), 2) + Math.pow(getBattleFieldWidth(),2) ;
+//        shortestTime <-- Math.sqrt(shortestTime); //Pythagoras for diagonal of the battlefield
+//        shortestTime <-- shortestTime/(11); //Divided by the speed of bullet of power 3
+        shortestTime = Math.sqrt(Math.pow(getBattleFieldHeight(),2) + Math.pow(getBattleFieldWidth(),2))/11;
 
         Wave wave = null; // incoming wave
         double arrivalTime;
@@ -219,8 +221,9 @@ public class WaveSurferBot extends AdvancedRobot {
         for( Wave ew : waves ){
             //In how many ticks this wave will reach us
             arrivalTime = myLocation.distance(ew.startPoint)/ew.bulletSpeed - (getTime() - ew.startTime);
-            //At max speed, we move 18px in
-            if(arrivalTime > ew.bulletSpeed && arrivalTime < shortestTime){
+
+            // >1 implies we have more than 1 tick to react
+            if(arrivalTime > 1 && arrivalTime < shortestTime){
                 wave = ew;
                 shortestTime = arrivalTime;
             }
@@ -231,19 +234,18 @@ public class WaveSurferBot extends AdvancedRobot {
 
     @Override
     public void onHitByBullet(HitByBulletEvent e){
-        waveHit(e);
+        myLocation.setLocation(getX(), getY()); //enemy knows where we are
+        waveHit(e.getBullet().getVelocity());
     }
 
-    public void waveHit(HitByBulletEvent e){
-        double blX = e.getBullet().getX();
-        double blY = e.getBullet().getY();
-        double blRelativeHeading = normalRelativeAngleDegrees(e.getBullet().getHeading());
-        double blSpeed = e.getBullet().getVelocity();
+    //We were shot.
+    public void waveHit(double blSpeed){
         Wave hitWave = null;
+        Point2D.Double thisLocation = new Point2D.Double(getX(), getY()); //Not dependent on global variables
 
         for(Wave w : waves){
-            // check if the speeds and timing match some wave (with a little tolerance)
-            if( (Math.abs(w.distanceTraveled(getTime()) - w.startPoint.distance(myLocation)) <= 10) //Compare distances myLocation-to-waveStartPoint and waveDistanceTraveled
+            // check if the speed and timing match some wave (with a little tolerance)
+            if( (Math.abs(w.distanceTraveled(getTime()) - w.startPoint.distance(thisLocation)) <= 10) //Compare distances myLocation-to-waveStartPoint and waveDistanceTraveled
                 && (Math.abs(w.bulletSpeed - blSpeed) <= 0.1) // compare speed of the bullet that hit us to the waveBulletSpeed
             ){
                 hitWave = w;
@@ -252,21 +254,10 @@ public class WaveSurferBot extends AdvancedRobot {
 
         // If we found a matching wave, update the stats.
         if (hitWave != null) {
-            Point2D.Double hitLocation = new Point2D.Double(getX(), getY());
-
-            // Calculate the offset angle and normalise it:
-            // This is the difference between our Bearing at the wave's fireTime and our Bearing at the time of the hit; Relative to waveStartPoint.
-            // Normalised the angle to the range [-180, 180].
-            double normalizedOffset = normalRelativeAngleDegrees(Tools.absoluteBearing(hitWave.startPoint, hitLocation) - hitWave.directAngle);
-
-            // Divide by the maximum escape angle (which depends on bullet velocity) and multiply by (-1 or 1) the wave's direction.
-            double guessFactor = normalizedOffset / Math.sin(8.0/(hitWave.bulletSpeed)) * hitWave.direction;
 
             // Map the guess factor from [-1, 1] to a bin index (our bins are the elements of the surfStats defined as Guess_Factor_Range)
-            int index = (int) limit(0, (guessFactor * ((GUESS_FACTOR_RANGE - 1) / 2.0)) + ((GUESS_FACTOR_RANGE - 1) / 2.0), GUESS_FACTOR_RANGE - 1);
-
             // Increment the stat for this guess factor.
-            surfStats[index]++;
+            surfStats[getFactorIndex(hitWave, thisLocation)]++;
 
             // Remove the wave so it isn't used again.
             waves.remove(hitWave);
@@ -282,17 +273,17 @@ public class WaveSurferBot extends AdvancedRobot {
         return value;
     }
 
-    //maxExcapeAngle = Math.sin(8.0/bulletSpeed)
+    //maxEscapeAngle = Math.sin(8.0/bulletSpeed)
 
-    //Method based on wallSmoothing from the Wave Surfing Tutorial
-    // botLocation - our co-ordinates
+    //Method based on wallSmoothing from the Surfing Tutorial
     // angle - try to find an angle that will keep us away from a wall
     // orientation - (1 or -1), informs if angle turns right (1) or angle turns left (-1)
-    public double wallSmoothing(Point2D.Double botLocation, double angle, int orientation) {
-        while (isNearWall(Tools.project(botLocation, angle, WALL_STICK), WALL_STICK)) {
-            angle = angle + orientation*0.05;
+    public double wallSmoothing(Point2D.Double currectLocation, double angleRd, int orientation) {
+        //decide if we need to turn to avoid walls and by how much
+        while (isNearWall(Tools.project(currectLocation, angleRd, WALL_STICK), WALL_STICK)) {
+            angleRd = angleRd + orientation*0.05;
         }
-        return angle;
+        return angleRd;
     }
 
     private boolean isNearWall(double x, double y, double minSpace) {
@@ -303,64 +294,76 @@ public class WaveSurferBot extends AdvancedRobot {
         return isNearWall(point.x, point.y, minSpace);
     }
 
-    //Method from the Wave Surfing Tutorial
-    public double checkDanger(Wave surfWave, int direction) {
-        int index = getFactorIndex(surfWave,
-                predictPosition(surfWave, direction));
-
-        return surfStats[index];
+    //Tells us how often we are shot based on the past
+    public double checkDanger(Wave wave, int direction) {
+        return surfStats[ getFactorIndex(wave, estimateFuturePosition(wave, direction)) ];
     }
 
-    //Method taken from the Wave Surfing Turorial
+    //Tells us what bearing (normalised to the guess factor range [-1, 1]) a point in a wave corresponds to.
+    //This index is in [0 , GUESS FACTOR RANGE-1]
     public static int getFactorIndex(Wave ew, Point2D.Double targetLocation) {
-        double offsetAngle = (Tools.absoluteBearing(ew.startPoint, targetLocation)
-                - ew.directAngle);
-        double factor = normalRelativeAngleDegrees(offsetAngle)
-                / Math.sin(8.0/(ew.bulletSpeed)) * ew.direction;
+        double offsetAngle = (Tools.absoluteBearing(ew.startPoint, targetLocation) - ew.directAngle);
+        double factor = ew.direction * normalRelativeAngleDegrees(offsetAngle) / (Math.sin(8.0 / (ew.bulletSpeed)));
+        int index = (int) (0.5 * (GUESS_FACTOR_RANGE - 1) * (1.0 + factor));
 
-        return (int)limit(0, (factor * ((GUESS_FACTOR_RANGE - 1) / 2)) + ((GUESS_FACTOR_RANGE - 1) / 2),
-                GUESS_FACTOR_RANGE - 1);
+        if (index < 0) {
+            return 0;
+        }else if(index > GUESS_FACTOR_RANGE - 1) {
+            return GUESS_FACTOR_RANGE - 1;
+        }
+
+        return  index;
     }
-
 
     //Estimates the future position of the bot based on game physics.
-    public Point2D.Double estimateFuturePosition(Wave surfWave, int direction) {
-        Point2D.Double futurePosition = (Point2D.Double) myLocation.clone();
-        double velocity = getVelocity();
-        double w = getHeadingRadians();
-        double turnLimit, moveAngle, movementDirection;
+    public Point2D.Double estimateFuturePosition(Wave wave, int direction) {
+        Point2D.Double futurePosition = new Point2D.Double(getX(), getY());
 
-        int timeStep = 0; // Counter for simulation steps
+        //For the sake of the math, radians were used.
+        double speed = getVelocity();
+        double heading = getHeadingRadians();
+        double turnLimit;
+        double moveAngle;
+        double movementDirection;
+
+        int timeStep = 0;
         boolean reached = false;
 
-        do {
-            // Calculate movement angle while avoiding walls
-            moveAngle = wallSmoothing(futurePosition, Tools.absoluteBearing(surfWave.startPoint,
-                    futurePosition) + (direction * (90)), direction) - heading;
+        do{
+            // Calculate movement angle considering walls
+            moveAngle = wallSmoothing(futurePosition, Tools.absoluteBearing(wave.startPoint, futurePosition) + (direction * (Math.PI / 2)), direction);
+            moveAngle = moveAngle - heading; //Adjust for current heading
             movementDirection = 1;
 
-            // Adjust movement angle if necessary
+            // Correct for downward movement
             if (Math.cos(moveAngle) < 0) {
-                moveAngle += Math.PI;
                 movementDirection = -1;
+                moveAngle = moveAngle + Math.PI;
             }
+
             moveAngle = normalRelativeAngle(moveAngle);
 
-            // Limit turning rate per tick
-            turnLimit = Math.PI / 720.0 * (40.0 - 3.0 * Math.abs(velocity));
+            // Limit turning rate per tick according to the Surfing tutorial
+            turnLimit = Math.PI / 720.0 * (40.0 - 3.0 * Math.abs(speed));
             heading = normalRelativeAngle(heading + limit(-turnLimit, moveAngle, turnLimit));
 
-            // Adjust velocity based on direction
-            velocity += (velocity * movementDirection < 0 ? 2 * movementDirection : movementDirection);
-            velocity = limit(-8, velocity, 8);
+            // Adjust speed based on direction
+            if(speed * movementDirection < 0){
+                speed = speed * (1 + 2*movementDirection); //deceleration = 2
+            }else{
+                speed = speed * (1 + movementDirection); //acceleration = 1
+            }
+
+            //ensure speed is within the correct bounds
+            if(speed < -8) speed = -8; //max reverse speed
+            if(speed > 8) speed = 8; //max forward speed
 
             // Compute the next position
-            futurePosition = Tools.project(futurePosition, heading, velocity);
+            futurePosition = Tools.project(futurePosition, heading, speed);
             timeStep++;
 
             // Check if the wave reaches the predicted position
-            if (futurePosition.distance(surfWave.startPoint) <
-                    surfWave.distanceTraveled(getTime()) + (timeStep * surfWave.bulletSpeed) + surfWave.bulletSpeed) {
+            if (futurePosition.distance(wave.startPoint) < wave.bulletSpeed * (1 + timeStep + getTime() - wave.startTime) ) {
                 reached = true;
             }
         } while (!reached && timeStep < 500);
@@ -368,20 +371,27 @@ public class WaveSurferBot extends AdvancedRobot {
         return futurePosition;
     }
 
+    //Decide if it is better to move forward or backwards to reach a given angle
+    //Method from Surfing Tutorial
+    public static void setBackAsFront(AdvancedRobot robot, double goAngleRd) {
+        double angle = normalRelativeAngle(goAngleRd - robot.getHeadingRadians());
+        if (Math.abs(angle) <= (Math.PI /2)) {
+            //North
+            robot.setAhead(100);
 
-    //Method based on setBackAsFront from the Robowiki Wave Surfing Tutorial
-    public static void setBackAsFront(AdvancedRobot robot, double goAngle) {
-        double angle = normalRelativeAngleDegrees(goAngle - robot.getHeading());
-        if (Math.abs(angle) <= (90)) {
+            //NorthWest
             if (angle < 0) robot.setTurnLeft(-1*angle);
+            //NorthEast
             else robot.setTurnRight(angle);
 
-            robot.setAhead(100);
         } else {
-            if (angle < 0) robot.setTurnRight(180 + angle);
-            else robot.setTurnLeft(180 - angle);
-
+            //South
             robot.setBack(100);
+            //SouthWest
+            if (angle < 0) robot.setTurnRight(Math.PI + angle);
+            //SouthEast
+            else robot.setTurnLeft(Math.PI - angle);
+
         }
     }
 }
