@@ -31,8 +31,9 @@ public class Apollo11v2 extends AdvancedRobot {
     public static double[] surfStats =new double[GUESS_FACTOR_RANGE];
 
     // Battlefield dimensions for wall smoothing
-    private static final int WALL_STICK = 50; // minimum pixels we keep from the wall
-    private static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
+    public static final int WALL_STICK = 50; // minimum pixels we keep from the wall
+    public static final int FIELD_CENTRE_RANGE = 50; // minimum pixels we keep from the wall
+    public boolean movingToCentre;
 
     public static int[] dadosLoc = new int[GUESS_FACTOR_RANGE]; // histograma
     public static int contador = 0; //conta quantos tiros damos
@@ -60,11 +61,12 @@ public class Apollo11v2 extends AdvancedRobot {
         myLocation = new Point2D.Double(getX(), getY());
         waves = new ArrayList<Wave>();
         surfDirections = new ArrayList<Integer>();
+        movingToCentre = false;
 
         //Too close to a wall
         addCustomEvent(new Condition("walled") {
             public boolean test() {
-                return isNearWall(getX(), getY(), WALL_STICK);
+                return !movingToCentre && isNearWall(getX(), getY(), WALL_STICK);
             }
         });
 
@@ -86,6 +88,8 @@ public class Apollo11v2 extends AdvancedRobot {
             double distance;
             double angleToCentre;
 
+            movingToCentre=true;
+
             //Check for out of bounds
             if( (getBattleFieldHeight() < FIELD_CENTRE_RANGE*2)
                     || (getBattleFieldWidth() < FIELD_CENTRE_RANGE*2)
@@ -105,12 +109,12 @@ public class Apollo11v2 extends AdvancedRobot {
             for (int i = 0; i < distance; i += 20) {
                 waveAngle = Math.sin(i / 50.0) * 30;
                 setTurnRight(angleToCentre + waveAngle); // Slight left/right adjustments
-                setAhead(WALL_STICK); // Move in small steps
+                setAhead(20); // Move in small steps
 
-                //keep scanning to continue the flow of operations
-                perfectRadar(Math.toDegrees(absoluteBearing(new Point2D.Double(getX(), getY()), enemyLocation)));
             }
-        }
+
+            movingToCentre = false;
+        }//end of walled custom event
     }
 
     //Checks if enemy fired and updates Wave ArrayList based on energy drops.
@@ -241,7 +245,8 @@ public class Apollo11v2 extends AdvancedRobot {
     //Causes an infinite loop on runtime
     public double wallSmoothing(Point2D.Double currectLocation, double angleRd, int orientation) {
         //decide if we need to turn to avoid walls and by how much
-        while (isNearWall(project(currectLocation, angleRd, WALL_STICK), WALL_STICK + 0.1)) {
+
+        while (isNearWall(project(currectLocation, angleRd, WALL_STICK), WALL_STICK)) {
             angleRd = angleRd + orientation*0.05;
         }
         return angleRd;
