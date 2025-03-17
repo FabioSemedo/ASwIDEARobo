@@ -2,6 +2,7 @@
 *.class
 *.xml
 *.iml
+*.properties
 stdOut.dat
 
 ### IntelliJ IDEA ###
@@ -34,4 +35,3 @@ bin/
 ### Mac OS ###
 .DS_Store
 battles/MeuDeusHelpUs.csv
-*.properties
